@@ -1,4 +1,4 @@
-- hosts: localhost
+- hosts: all
   vars:
       hi: Hello World!
   tasks:
