@@ -1,0 +1,7 @@
+- hosts: localhost
+  vars:
+      hi: Hello World!
+  tasks:
+    - name: Time to greet
+      debug:
+        msg: "{{ hi }}"
