@@ -1,10 +1,11 @@
 ---
-- hosts: patch_nodes
+- hosts: all
   remote_user: devshell
   tasks:
     - name: Update packages
       ansible.builtin.apt:
         update_cache: yes
+      become: true
       when: ansible_os_family == "Debian"
 
     - name: Retrieve pending updates
@@ -23,21 +24,3 @@
         that:
           - "apt_upgrades['stdout_lines'] | regex_search(';') == None"
         fail_msg: "Data contains semi-colon character which could be an attemptive of SQL injection."
-
-- hosts: localhost
-  tasks:
-    - name: Insert packages updatable on patch_management database
-      postgresql_query:
-        login_host: '10.0.2.2'
-        login_user: postgres
-        login_password: postgres
-        db: patch_management
-        query: INSERT INTO host_update_info VALUES (%s, %s);
-        positional_args:
-          - "{{ 9999999999999999999 | random | to_uuid }}" # The Postgres db itself must be responsible for this
-          - "{{ hostvars['webserver1']['apt_upgrades']['stdout_lines'] }}"
-      register: query_result
-
-    - name: Display insert result
-      debug:
-        var: query_result.statusmessage
