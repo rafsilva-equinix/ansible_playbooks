@@ -4,3 +4,7 @@
     - name: Hello Message
       debug:
         msg: "Hello World!"
+
+    - name: Retrieve Test Vault Credential
+      debug: 
+        msg: "{{ lookup('env', 'Teste') }}"
