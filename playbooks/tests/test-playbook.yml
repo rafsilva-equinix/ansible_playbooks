@@ -1,0 +1,10 @@
+- name: Hello World
+  hosts: all
+  tasks:
+    - name: Get hostname
+      command: hostname
+      register: hostname_output
+
+    - name: Print message
+      debug:
+        msg: "Say Hello Word, {{ hostname_output.stdout }}!"

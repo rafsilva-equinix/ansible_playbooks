@@ -1,0 +1,26 @@
+---
+- hosts: headnodes
+  gather_facts: no
+  tasks:
+    - name: Check Python version
+      shell: python3 --version
+      register: python_version
+      changed_when: False
+
+    - name: Check if Python version is 3.10 or higher
+      assert:
+        that: python_version.stdout | regex_search('(Python 3\.[1-9][0-9]*\.[0-9]*)') is not none
+        fail_msg: "Python 3.10 or higher is not installed"
+      run_once: true
+
+    - name: Update apt cache
+      become: yes
+      apt:
+        update_cache: yes
+
+    - name: Install python3-venv
+      become: yes
+      apt:
+        name: python3-venv
+        state: present
+...

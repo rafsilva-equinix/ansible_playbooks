@@ -1,0 +1,56 @@
+---
+- hosts: all 
+  tasks:
+    - name: Update packages
+      ansible.builtin.apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+      tags:
+      - update_packages
+
+    - name: Retrieve pending updates
+      shell: apt list --upgradable
+      register: apt_upgrades
+      changed_when: False
+      when: ansible_os_family == "Debian"
+
+    - name: Display packages that can be updated
+      debug:
+        msg: "{{ apt_upgrades.stdout_lines }}"
+      when: ansible_os_family == "Debian"
+      tags:
+      - display_packages
+
+    - name: Check if data is safe
+      assert:
+        that:
+          - "apt_upgrades['stdout_lines'] | regex_search(';') == None"
+        fail_msg: "Data contains unexpected semi-colon character which could be an attemptive of SQL injection."
+
+- hosts: localhost
+  become: no
+  vars:
+    secret: "{{ lookup('aws_secret', 'UAT/PATCHREPORTING', region='us-east-1') }}"
+  tags: update_database
+  tasks:
+    - name: Install psycopg 
+      pip:
+        name: psycopg2-binary==2.9.9
+  
+    - name: Insert packages updatable on patch_management database
+      postgresql_query:
+        login_host: "{{ secret['DB_HOST'] }}"
+        login_user: "{{ secret['DB_USER'] }}"
+        login_password: "{{ secret['DB_PASS'] }}"
+        port: "{{ secret['DB_PORT'] }}"
+        db: "{{ secret['DB_NAME'] }}"
+        query: INSERT INTO patch_management.raw_upgradable (configuration_item_sys_id, raw_upgradable) VALUES (%s, %s);
+        positional_args:
+          - "{{ hostvars[item]['sys_id'] }}"
+          - "{{ hostvars[item]['apt_upgrades']['stdout_lines'] }}"
+      loop: "{{ groups['all'] }}"
+      register: query_result
+
+    - name: Display insert result
+      debug:
+        var: query_result.statusmessage
